@@ -1,0 +1,6 @@
+/sa-signer*
+/keys.json
+/jwt/jwt
+/jwks/jwks
+/rsa/rsa
+/s3endpoint/s3endpoint
