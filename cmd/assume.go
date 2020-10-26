@@ -21,8 +21,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// assumeWebIdentityCmd represents the assumeWebIdentity command
-var assumeWebIdentityCmd = &cobra.Command{
+// assumeCmd represents the assume command
+var assumeCmd = &cobra.Command{
 	Use:   "assume",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
@@ -37,15 +37,15 @@ to quickly create a Cobra application.`,
 }
 
 func init() {
-	rootCmd.AddCommand(assumeWebIdentityCmd)
+	rootCmd.AddCommand(assumeCmd)
 
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// assumeWebIdentityCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// assumeCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// assumeWebIdentityCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// assumeCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

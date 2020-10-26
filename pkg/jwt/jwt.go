@@ -55,7 +55,13 @@ func createSignedTokenString() (string, error) {
 		"exp": time.Now().Unix() + 3600,
 		"iat": time.Now().Unix(),
 	})
-	token.Header["kid"] = "Rwcrfsg-0jyoVhNHpud261N1JzdPC0f1XpOsj6kMPBI"
+
+	kid, err := ioutil.ReadFile("_output/key-id")
+	if err != nil {
+		return "", fmt.Errorf("error reading key file: %v\n", err)
+	}
+
+	token.Header["kid"] = string(kid)
 	tokenString, err := token.SignedString(key)
 	if err != nil {
 		return "", fmt.Errorf("error signing token: %v\n", err)

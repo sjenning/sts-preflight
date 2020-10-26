@@ -99,6 +99,7 @@ func New() {
 		Bucket: awssdk.String(bucketName),
 		Key:    awssdk.String(keysURI),
 	})
+	f.Close()
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -179,6 +180,19 @@ func New() {
 
 		roleARN = *roleOutput.Role.Arn
 		log.Print("Role created ", roleARN)
+	}
+
+	roleARNFile := "_output/role-arn"
+	log.Print("Writing Role ARN to ", roleARNFile)
+	f, err = os.Create(roleARNFile)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	_, err = f.WriteString(roleARN)
+	f.Close()
+	if err != nil {
+		log.Fatal(err.Error())
 	}
 
 	_, err = iamClient.AttachRolePolicy(&iam.AttachRolePolicyInput{

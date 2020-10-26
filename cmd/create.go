@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/sjenning/sts-preflight/pkg/jwks"
 	"github.com/sjenning/sts-preflight/pkg/rsa"
 	"github.com/sjenning/sts-preflight/pkg/s3endpoint"
@@ -18,6 +20,8 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		os.Mkdir("_output", 0700)
+
 		rsa.New()
 		jwks.New()
 		s3endpoint.New()

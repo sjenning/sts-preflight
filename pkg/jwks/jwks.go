@@ -53,6 +53,18 @@ func New() {
 		log.Fatal(err.Error())
 	}
 
+	keyIDFile := "_output/key-id"
+	log.Print("Writing key id to ", keyIDFile)
+	f, err := os.Create("_output/key-id")
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	_, err = f.WriteString(kid)
+	f.Close()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
 	var keys []jose.JSONWebKey
 	keys = append(keys, jose.JSONWebKey{
 		Key:       pubKey,
@@ -67,12 +79,15 @@ func New() {
 	}
 
 	log.Print("Writing JWKS to ", keysFile)
-	f, err := os.Create(keysFile)
+	f, err = os.Create(keysFile)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-	defer f.Close()
-	f.Write(keysJSON)
+	_, err = f.Write(keysJSON)
+	f.Close()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 }
 
 // copied from kubernetes/kubernetes#78502

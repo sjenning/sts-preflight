@@ -17,6 +17,12 @@ func New() {
 	publicKeyFile := "_output/sa-signer.pub"
 	bitSize := 4096
 
+	_, err := os.Stat(privateKeyFile)
+	if err == nil {
+		log.Print("Using existing RSA keypair")
+		return
+	}
+
 	log.Print("Generating RSA keypair")
 	privateKey, err := rsa.GenerateKey(rand.Reader, bitSize)
 	if err != nil {
