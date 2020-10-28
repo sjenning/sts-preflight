@@ -12,7 +12,7 @@ Usage:
   sts-preflight [command]
 
 Available Commands:
-  assume      Get STS credentials using an OIDC token (not implemented yet)
+  assume      Get STS credentials using an OIDC token
   create      Creates STS infrastructure in AWS
   destroy     Removes STS infrastructure from AWS (not implemented yet)
   help        Help about any command
@@ -32,6 +32,13 @@ This command
 ### Token
 ```
 ./sts-create token
+```
+This command creates a JWT signed by the RSA private key and stores it in `_output/token`.  This token is validated by the OIDC provider, which contains the matching key ID (kid) in the JWKS.  The installer Role can then be assumed since the OIDC provider is a Trusted Entity for the Role.
+
+After this step, one can `source scripts/set-role-creds.sh` to set `AWS_ROLE_ARN` and `AWS_WEB_IDENTITY_TOKEN_FILE`.  Then one can execute aws CLI commands allowing the CLI to do the `AssumeRoleWithWebIdentity` and use the STS issued credentials (cached until expiration).
+### Assume
+```
+./sts-create assume
 ```
 This command creates a JWT signed by the RSA private key and stores it in `_output/token`.  This token is validated by the OIDC provider, which contains the matching key ID (kid) in the JWKS.  The installer Role can then be assumed since the OIDC provider is a Trusted Entity for the Role.
 
