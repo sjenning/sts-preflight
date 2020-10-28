@@ -1,6 +1,6 @@
 **Update 10/27: This still has hardcoded values and it not suitable for general use yet. However it is useful for documenting the flow for setting up the required pre-install resources and configuration in AWS**
 # sts-preflight
-This is a tool for allowing Openshift to install and operate using STS based credentials
+This is a tool for allowing Openshift to install using STS based credentials
 ## Download and Build
 ```bash
 go get github.com/sjenning/sts-preflight
