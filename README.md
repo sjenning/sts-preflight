@@ -1,4 +1,3 @@
-**Update 10/27: This still has hardcoded values and it not suitable for general use yet. However it is useful for documenting the flow for setting up the required pre-install resources and configuration in AWS**
 # sts-preflight
 This is a tool for allowing Openshift to install using STS based credentials
 ## Download and Build
@@ -13,25 +12,23 @@ Usage:
   sts-preflight [command]
 
 Available Commands:
-  assume      A brief description of your command
-  create      A brief description of your command
-  destroy     A brief description of your command
+  assume      Get STS credentials using an OIDC token (not implemented yet)
+  create      Creates STS infrastructure in AWS
+  destroy     Removes STS infrastructure from AWS (not implemented yet)
   help        Help about any command
-  token       A brief description of your command
+  token       Creates a token signed by the RSA private key and validated by the OIDC provider
 ```
 ### Create
 ```
-./sts-preflight create
+./sts-preflight create --infra-name example --region us-west-1
 ```
 This command
 * creates an RSA keypair
 * create a JKWS document with the public part of the keypair
 * creates an OIDC discovery document
-* creates s3 bucket with the discovery and JKWS documents
+* creates s3 bucket with the discovery and JKWS documents in the specified region
 * creates an OIDC provider in IAM whose issuer is the s3 bucket URL
 * creates an installer Role with the OIDC provider as a Trusted Entity and attaches an Administrator policy
-
-The role ARN is stored in `_output/role-arn`
 ### Token
 ```
 ./sts-create token
