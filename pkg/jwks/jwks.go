@@ -12,10 +12,11 @@ import (
 	"log"
 	"os"
 
+	"github.com/sjenning/sts-preflight/pkg/cmd/create"
 	jose "gopkg.in/square/go-jose.v2"
 )
 
-func New() {
+func New(state *create.State) {
 	pubKeyFile := "_output/sa-signer.pub"
 	keysFile := "_output/keys.json"
 
@@ -53,17 +54,7 @@ func New() {
 		log.Fatal(err.Error())
 	}
 
-	keyIDFile := "_output/key-id"
-	log.Print("Writing key id to ", keyIDFile)
-	f, err := os.Create("_output/key-id")
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-	_, err = f.WriteString(kid)
-	f.Close()
-	if err != nil {
-		log.Fatal(err.Error())
-	}
+	state.Kid = kid
 
 	var keys []jose.JSONWebKey
 	keys = append(keys, jose.JSONWebKey{
@@ -79,7 +70,7 @@ func New() {
 	}
 
 	log.Print("Writing JWKS to ", keysFile)
-	f, err = os.Create(keysFile)
+	f, err := os.Create(keysFile)
 	if err != nil {
 		log.Fatal(err.Error())
 	}

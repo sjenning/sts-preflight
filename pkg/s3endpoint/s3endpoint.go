@@ -12,6 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/s3"
+
+	"github.com/sjenning/sts-preflight/pkg/cmd/create"
 )
 
 var (
@@ -40,13 +42,14 @@ var (
 }`
 )
 
-func New() {
-	bucketName := "sjenning-oidc-provider"
-	issuerURL := fmt.Sprintf("https://s3-us-west-1.amazonaws.com/%s", bucketName)
-	roleName := "sjenning-installer-role"
+func New(config create.Config, state *create.State) {
+	bucketName := fmt.Sprintf("%s-installer", config.InfraName)
+	roleName := bucketName
+	issuerURL := fmt.Sprintf("s3-%s.amazonaws.com/%s", config.Region, bucketName)
+	issuerURLWithProto := fmt.Sprintf("https://%s", issuerURL)
 
 	cfg := &awssdk.Config{
-		Region: awssdk.String("us-west-1"),
+		Region: awssdk.String(config.Region),
 	}
 
 	s, err := session.NewSession(cfg)
@@ -76,7 +79,7 @@ func New() {
 		log.Print("Bucket ", bucketName, " created")
 	}
 
-	discoveryJSON := fmt.Sprintf(discoveryTemplate, issuerURL, issuerURL, keysURI)
+	discoveryJSON := fmt.Sprintf(discoveryTemplate, issuerURLWithProto, issuerURLWithProto, keysURI)
 	_, err = s3Client.PutObject(&s3.PutObjectInput{
 		ACL:    awssdk.String("public-read"),
 		Body:   awssdk.ReadSeekCloser(strings.NewReader(discoveryJSON)),
@@ -127,7 +130,7 @@ func New() {
 			ThumbprintList: []*string{
 				awssdk.String("A9D53002E97E00E043244F3D170D6F4C414104FD"), // root CA thumbprint for s3 (DigiCert)
 			},
-			Url: awssdk.String(issuerURL),
+			Url: awssdk.String(issuerURLWithProto),
 		})
 		if err != nil {
 			log.Fatal(err.Error())
@@ -148,7 +151,7 @@ func New() {
 				"Action": "sts:AssumeRoleWithWebIdentity",
 			"Condition": {
 				"StringEquals": {
-					"s3-us-west-1.amazonaws.com/sjenning-oidc-provider:aud": "sts.amazonaws.com"
+					"%s:aud": "sts.amazonaws.com"
 				}
 			}
 		}
@@ -172,7 +175,7 @@ func New() {
 	if len(roleARN) == 0 {
 		roleOutput, err := iamClient.CreateRole(&iam.CreateRoleInput{
 			RoleName:                 awssdk.String(roleName),
-			AssumeRolePolicyDocument: awssdk.String(fmt.Sprintf(rolePolicyTemplate, providerARN)),
+			AssumeRolePolicyDocument: awssdk.String(fmt.Sprintf(rolePolicyTemplate, providerARN, issuerURL)),
 		})
 		if err != nil {
 			log.Fatal(err.Error())
@@ -182,18 +185,7 @@ func New() {
 		log.Print("Role created ", roleARN)
 	}
 
-	roleARNFile := "_output/role-arn"
-	log.Print("Writing Role ARN to ", roleARNFile)
-	f, err = os.Create(roleARNFile)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	_, err = f.WriteString(roleARN)
-	f.Close()
-	if err != nil {
-		log.Fatal(err.Error())
-	}
+	state.RoleARN = roleARN
 
 	_, err = iamClient.AttachRolePolicy(&iam.AttachRolePolicyInput{
 		PolicyArn: awssdk.String("arn:aws:iam::aws:policy/AdministratorAccess"),

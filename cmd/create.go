@@ -3,41 +3,39 @@ package cmd
 import (
 	"os"
 
+	"github.com/sjenning/sts-preflight/pkg/cmd/create"
 	"github.com/sjenning/sts-preflight/pkg/jwks"
 	"github.com/sjenning/sts-preflight/pkg/rsa"
 	"github.com/sjenning/sts-preflight/pkg/s3endpoint"
 	"github.com/spf13/cobra"
 )
 
-// createCmd represents the create command
+var (
+	createConfig create.Config
+	createState  create.State
+)
+
 var createCmd = &cobra.Command{
 	Use:   "create",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Creates STS infrastructure in AWS",
 	Run: func(cmd *cobra.Command, args []string) {
 		os.Mkdir("_output", 0700)
 
+		createState.InfraName = createConfig.InfraName
+		createState.Region = createConfig.Region
 		rsa.New()
-		jwks.New()
-		s3endpoint.New()
+		jwks.New(&createState)
+		s3endpoint.New(createConfig, &createState)
+		createState.Write()
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(createCmd)
 
-	// Here you will define your flags and configuration settings.
+	createCmd.PersistentFlags().StringVar(&createConfig.InfraName, "infra-name", "", "Name prefix for all created AWS resources")
+	createCmd.MarkPersistentFlagRequired("infra-name")
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// createCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// createCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	createCmd.PersistentFlags().StringVar(&createConfig.Region, "region", "", "AWS region were the s3 OIDC endpoint will be created")
+	createCmd.MarkPersistentFlagRequired("region")
 }
