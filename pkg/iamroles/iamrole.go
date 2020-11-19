@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -20,6 +22,10 @@ import (
 	"github.com/sjenning/sts-preflight/pkg/cmd/create"
 )
 
+const (
+	manifestsDir = "_manifests"
+)
+
 func Create(createConfig create.Config, oidcProviderARN, issuerURL string) {
 	if createConfig.CredentialsRequestsFile == "" {
 		return
@@ -28,6 +34,10 @@ func Create(createConfig create.Config, oidcProviderARN, issuerURL string) {
 	crFile, err := os.Open(createConfig.CredentialsRequestsFile)
 	if err != nil {
 		log.Fatalf("failed to open credentials request file: %s\n", err)
+	}
+
+	if err := os.MkdirAll(manifestsDir, 0700); err != nil {
+		log.Fatalf("unable to create directory to store credentials Secrets: %s", err)
 	}
 
 	decoder := yaml.NewYAMLOrJSONDecoder(crFile, 4096)
@@ -64,10 +74,12 @@ func processCredentialsRequest(cr *credreqv1.CredentialsRequest, infraName, oidc
 
 	// infraName-targetNamespace-targetSecretName
 	roleName := fmt.Sprintf("%s-%s-%s", infraName, cr.Spec.SecretRef.Namespace, cr.Spec.SecretRef.Name)
-	createRole(roleName, awsProviderSpec.StatementEntries, fmt.Sprintf("%s/%s", cr.Spec.SecretRef.Namespace, cr.Spec.SecretRef.Name), oidcProviderARN, issuerURL)
+	roleARN := createRole(roleName, awsProviderSpec.StatementEntries, fmt.Sprintf("%s/%s", cr.Spec.SecretRef.Namespace, cr.Spec.SecretRef.Name), oidcProviderARN, issuerURL)
+
+	writeSecret(cr, roleARN)
 }
 
-func createRole(roleName string, statementEntries []credreqv1.StatementEntry, namespacedName, oidcProviderARN, issuerURL string) {
+func createRole(roleName string, statementEntries []credreqv1.StatementEntry, namespacedName, oidcProviderARN, issuerURL string) string {
 
 	var shortenedRoleName string
 	if len(roleName) > 64 {
@@ -141,6 +153,7 @@ func createRole(roleName string, statementEntries []credreqv1.StatementEntry, na
 		log.Fatalf("Failed to put role policy: %s", err)
 	}
 
+	return *role.Arn
 }
 
 // StatementEntry is a simple type used to serialize to AWS' PolicyDocument format.
@@ -181,4 +194,28 @@ func createRolePolicy(statements []credreqv1.StatementEntry) string {
 	}
 
 	return string(b)
+}
+
+func writeSecret(cr *credreqv1.CredentialsRequest, roleARN string) {
+	fileName := fmt.Sprintf("%s-%s-credentials.yaml", cr.Spec.SecretRef.Namespace, cr.Spec.SecretRef.Name)
+	filePath := filepath.Join(manifestsDir, fileName)
+
+	fileData := fmt.Sprintf(`apiVersion: v1
+stringData:
+  credentials: |-
+    [default]
+    role_arn = %s
+    web_identity_token_file = /var/run/secrets/openshift/serviceaccount/token
+kind: Secret
+metadata:
+  name: %s
+  namespace: %s
+type: Opaque
+`, roleARN, cr.Spec.SecretRef.Name, cr.Spec.SecretRef.Namespace)
+
+	if err := ioutil.WriteFile(filePath, []byte(fileData), 0600); err != nil {
+		log.Fatalf("Failed to save Secret file: %s", err)
+	}
+
+	log.Printf("Saved credentials configuration to: %s", filePath)
 }
