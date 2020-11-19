@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 
 	"github.com/sjenning/sts-preflight/pkg/cmd/create"
+	"github.com/sjenning/sts-preflight/pkg/iamroles"
 )
 
 var (
@@ -195,4 +196,6 @@ func New(config create.Config, state *create.State) {
 		log.Fatal(err.Error())
 	}
 	log.Print("AdministratorAccess attached to Role ", roleName)
+
+	iamroles.Create(config, providerARN, issuerURL)
 }

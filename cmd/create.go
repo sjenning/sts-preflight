@@ -35,6 +35,7 @@ func init() {
 
 	createCmd.PersistentFlags().StringVar(&createConfig.InfraName, "infra-name", "", "Name prefix for all created AWS resources")
 	createCmd.MarkPersistentFlagRequired("infra-name")
+	createCmd.PersistentFlags().StringVar(&createConfig.CredentialsRequestsFile, "credentials-requests-to-roles", "", "Process the (yaml) list of CredentialsRequests into AWS IAM Roles")
 
 	createCmd.PersistentFlags().StringVar(&createConfig.Region, "region", "", "AWS region were the s3 OIDC endpoint will be created")
 	createCmd.MarkPersistentFlagRequired("region")
