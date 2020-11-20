@@ -3,8 +3,10 @@ package s3endpoint
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	awssdk "github.com/aws/aws-sdk-go/aws"
@@ -15,6 +17,12 @@ import (
 
 	"github.com/sjenning/sts-preflight/pkg/cmd/create"
 	"github.com/sjenning/sts-preflight/pkg/iamroles"
+)
+
+const (
+	manifestsDir                  = "_output/manifests"
+	clusterAuthenticationFilename = "cluster-authentication-02-config.yaml"
+	boundSAKeyFilename            = "bound-service-account-signing-key.key"
 )
 
 var (
@@ -44,6 +52,13 @@ var (
 )
 
 func New(config create.Config, state *create.State) {
+	if err := os.RemoveAll(manifestsDir); err != nil {
+		log.Fatalf("failed to clean up manifests directory: %s", err)
+	}
+	if err := os.MkdirAll(manifestsDir, 0700); err != nil {
+		log.Fatalf("failed to create manifests directory: %s", err)
+	}
+
 	bucketName := fmt.Sprintf("%s-installer", config.InfraName)
 	roleName := bucketName
 	issuerURL := fmt.Sprintf("s3.%s.amazonaws.com/%s", config.Region, bucketName)
@@ -197,5 +212,23 @@ func New(config create.Config, state *create.State) {
 	}
 	log.Print("AdministratorAccess attached to Role ", roleName)
 
-	iamroles.Create(config, providerARN, issuerURL)
+	createClusterAuthentication(issuerURL)
+
+	iamroles.Create(config, manifestsDir, providerARN, issuerURL)
+}
+
+func createClusterAuthentication(oidcURL string) {
+	clusterAuthenticationTemplate := `apiVersion: config.openshift.io/v1
+kind: Authentication
+metadata:
+  name: cluster
+spec:
+  serviceAccountIssuer: %s`
+
+	clusterAuthFilepath := filepath.Join("_output/manifests", clusterAuthenticationFilename)
+
+	fileData := fmt.Sprintf(clusterAuthenticationTemplate, oidcURL)
+	if err := ioutil.WriteFile(clusterAuthFilepath, []byte(fileData), 0600); err != nil {
+		log.Fatalf("failed to save cluster authentication file: %s", err)
+	}
 }

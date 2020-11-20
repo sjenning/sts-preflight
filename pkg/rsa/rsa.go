@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -16,6 +17,8 @@ func New() {
 	privateKeyFile := "_output/sa-signer"
 	publicKeyFile := "_output/sa-signer.pub"
 	bitSize := 4096
+
+	defer copyPrivateKeyForInstaller(privateKeyFile)
 
 	_, err := os.Stat(privateKeyFile)
 	if err == nil {
@@ -108,4 +111,34 @@ func writeKeyToFile(keyBytes []byte, saveFileTo string) error {
 
 	log.Printf("Key saved to: %s", saveFileTo)
 	return nil
+}
+
+func copyPrivateKeyForInstaller(sourceFile string) {
+	privateKeyFileForInstaller := "_output/tls/bound-service-account-signing-key.key"
+
+	tlsDir := "_output/tls"
+	if err := os.RemoveAll(tlsDir); err != nil {
+		log.Fatalf("failed to remove tls installer directory: %s", err)
+	}
+	if err := os.MkdirAll(tlsDir, 0700); err != nil {
+		log.Fatalf("unable to create directories: %s", err)
+	}
+
+	log.Print("Copying signing key for use by installer")
+	from, err := os.Open(sourceFile)
+	if err != nil {
+		log.Fatalf("failed to open privatekeyfile for copying: %s", err)
+	}
+	defer from.Close()
+
+	to, err := os.OpenFile(privateKeyFileForInstaller, os.O_RDWR|os.O_CREATE, 0600)
+	if err != nil {
+		log.Fatalf("failed to open/create target bound serviceaccount file: %s", err)
+	}
+	defer to.Close()
+
+	_, err = io.Copy(to, from)
+	if err != nil {
+		log.Fatalf("failed to copy file: %s", err)
+	}
 }

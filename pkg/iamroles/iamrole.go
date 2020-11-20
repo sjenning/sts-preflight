@@ -22,11 +22,7 @@ import (
 	"github.com/sjenning/sts-preflight/pkg/cmd/create"
 )
 
-const (
-	manifestsDir = "_manifests"
-)
-
-func Create(createConfig create.Config, oidcProviderARN, issuerURL string) {
+func Create(createConfig create.Config, manifestsDir, oidcProviderARN, issuerURL string) {
 	if createConfig.CredentialsRequestsFile == "" {
 		return
 	}
@@ -34,10 +30,6 @@ func Create(createConfig create.Config, oidcProviderARN, issuerURL string) {
 	crFile, err := os.Open(createConfig.CredentialsRequestsFile)
 	if err != nil {
 		log.Fatalf("failed to open credentials request file: %s\n", err)
-	}
-
-	if err := os.MkdirAll(manifestsDir, 0700); err != nil {
-		log.Fatalf("unable to create directory to store credentials Secrets: %s", err)
 	}
 
 	decoder := yaml.NewYAMLOrJSONDecoder(crFile, 4096)
@@ -50,11 +42,11 @@ func Create(createConfig create.Config, oidcProviderARN, issuerURL string) {
 			log.Fatalf("Failed to decode CredentialsRequest: %s", err)
 		}
 
-		processCredentialsRequest(cr, createConfig.InfraName, oidcProviderARN, issuerURL)
+		processCredentialsRequest(cr, manifestsDir, createConfig.InfraName, oidcProviderARN, issuerURL)
 	}
 }
 
-func processCredentialsRequest(cr *credreqv1.CredentialsRequest, infraName, oidcProviderARN, issuerURL string) {
+func processCredentialsRequest(cr *credreqv1.CredentialsRequest, manifestsDir, infraName, oidcProviderARN, issuerURL string) {
 	codec, err := credreqv1.NewCodec()
 	if err != nil {
 		fmt.Printf("Failed to create credReq codec: %s\n", err)
@@ -76,7 +68,7 @@ func processCredentialsRequest(cr *credreqv1.CredentialsRequest, infraName, oidc
 	roleName := fmt.Sprintf("%s-%s-%s", infraName, cr.Spec.SecretRef.Namespace, cr.Spec.SecretRef.Name)
 	roleARN := createRole(roleName, awsProviderSpec.StatementEntries, fmt.Sprintf("%s/%s", cr.Spec.SecretRef.Namespace, cr.Spec.SecretRef.Name), oidcProviderARN, issuerURL)
 
-	writeSecret(cr, roleARN)
+	writeSecret(cr, manifestsDir, roleARN)
 }
 
 func createRole(roleName string, statementEntries []credreqv1.StatementEntry, namespacedName, oidcProviderARN, issuerURL string) string {
@@ -196,7 +188,7 @@ func createRolePolicy(statements []credreqv1.StatementEntry) string {
 	return string(b)
 }
 
-func writeSecret(cr *credreqv1.CredentialsRequest, roleARN string) {
+func writeSecret(cr *credreqv1.CredentialsRequest, manifestsDir, roleARN string) {
 	fileName := fmt.Sprintf("%s-%s-credentials.yaml", cr.Spec.SecretRef.Namespace, cr.Spec.SecretRef.Name)
 	filePath := filepath.Join(manifestsDir, fileName)
 
