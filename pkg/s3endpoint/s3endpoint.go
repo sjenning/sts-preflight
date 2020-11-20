@@ -46,7 +46,7 @@ var (
 func New(config create.Config, state *create.State) {
 	bucketName := fmt.Sprintf("%s-installer", config.InfraName)
 	roleName := bucketName
-	issuerURL := fmt.Sprintf("s3-%s.amazonaws.com/%s", config.Region, bucketName)
+	issuerURL := fmt.Sprintf("s3.%s.amazonaws.com/%s", config.Region, bucketName)
 	issuerURLWithProto := fmt.Sprintf("https://%s", issuerURL)
 
 	cfg := &awssdk.Config{
@@ -126,7 +126,7 @@ func New(config create.Config, state *create.State) {
 	if len(providerARN) == 0 {
 		oidcOutput, err := iamClient.CreateOpenIDConnectProvider(&iam.CreateOpenIDConnectProviderInput{
 			ClientIDList: []*string{
-				awssdk.String("sts.amazonaws.com"),
+				awssdk.String("openshift"),
 			},
 			ThumbprintList: []*string{
 				awssdk.String("A9D53002E97E00E043244F3D170D6F4C414104FD"), // root CA thumbprint for s3 (DigiCert)
@@ -152,7 +152,7 @@ func New(config create.Config, state *create.State) {
 				"Action": "sts:AssumeRoleWithWebIdentity",
 			"Condition": {
 				"StringEquals": {
-					"%s:aud": "sts.amazonaws.com"
+					"%s:aud": "openshift"
 				}
 			}
 		}
