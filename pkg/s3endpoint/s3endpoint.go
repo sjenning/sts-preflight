@@ -212,7 +212,7 @@ func New(config create.Config, state *create.State) {
 	}
 	log.Print("AdministratorAccess attached to Role ", roleName)
 
-	createClusterAuthentication(issuerURL)
+	createClusterAuthentication(issuerURLWithProto)
 
 	iamroles.Create(config, manifestsDir, providerARN, issuerURL)
 }
