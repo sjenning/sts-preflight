@@ -11,8 +11,9 @@ const (
 )
 
 type Config struct {
-	InfraName string
-	Region    string
+	InfraName               string
+	Region                  string
+	CredentialsRequestsFile string
 }
 
 type State struct {

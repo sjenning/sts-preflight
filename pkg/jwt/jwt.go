@@ -28,8 +28,8 @@ func New(config token.Config) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
 		"sub": "openshift-install",
-		"aud": "sts.amazonaws.com",
-		"iss": fmt.Sprintf("https://s3-%s.amazonaws.com/%s-installer", state.Region, state.InfraName),
+		"aud": "openshift",
+		"iss": fmt.Sprintf("https://s3.%s.amazonaws.com/%s-installer", state.Region, state.InfraName),
 		"exp": time.Now().Unix() + config.ExpireSeconds,
 		"iat": time.Now().Unix(),
 	})
