@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	manifestsDir                  = "_output/manifests"
+	manifestsDir                  = "manifests"
 	clusterAuthenticationFilename = "cluster-authentication-02-config.yaml"
 	boundSAKeyFilename            = "bound-service-account-signing-key.key"
 )
@@ -52,10 +52,11 @@ var (
 )
 
 func New(config create.Config, state *create.State) {
-	if err := os.RemoveAll(manifestsDir); err != nil {
+	manifestsDirPath := filepath.Join(config.TargetDir, manifestsDir)
+	if err := os.RemoveAll(manifestsDirPath); err != nil {
 		log.Fatalf("failed to clean up manifests directory: %s", err)
 	}
-	if err := os.MkdirAll(manifestsDir, 0700); err != nil {
+	if err := os.MkdirAll(manifestsDirPath, 0700); err != nil {
 		log.Fatalf("failed to create manifests directory: %s", err)
 	}
 
@@ -107,7 +108,8 @@ func New(config create.Config, state *create.State) {
 	}
 	log.Print("OIDC discovery document at ", discoveryURI, " updated")
 
-	f, err := os.Open("_output/keys.json")
+	keysPath := filepath.Join(config.TargetDir, "keys.json")
+	f, err := os.Open(keysPath)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -212,12 +214,12 @@ func New(config create.Config, state *create.State) {
 	}
 	log.Print("AdministratorAccess attached to Role ", roleName)
 
-	createClusterAuthentication(issuerURLWithProto)
+	createClusterAuthentication(issuerURLWithProto, manifestsDirPath)
 
-	iamroles.Create(config, manifestsDir, providerARN, issuerURL)
+	iamroles.Create(config, manifestsDirPath, providerARN, issuerURL)
 }
 
-func createClusterAuthentication(oidcURL string) {
+func createClusterAuthentication(oidcURL, manifestsDir string) {
 	clusterAuthenticationTemplate := `apiVersion: config.openshift.io/v1
 kind: Authentication
 metadata:
@@ -225,7 +227,7 @@ metadata:
 spec:
   serviceAccountIssuer: %s`
 
-	clusterAuthFilepath := filepath.Join("_output/manifests", clusterAuthenticationFilename)
+	clusterAuthFilepath := filepath.Join(manifestsDir, clusterAuthenticationFilename)
 
 	fileData := fmt.Sprintf(clusterAuthenticationTemplate, oidcURL)
 	if err := ioutil.WriteFile(clusterAuthFilepath, []byte(fileData), 0600); err != nil {

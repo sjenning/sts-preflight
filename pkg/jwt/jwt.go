@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
@@ -12,11 +13,12 @@ import (
 	"github.com/sjenning/sts-preflight/pkg/cmd/token"
 )
 
-func New(config token.Config) {
+func New(config token.Config, tokenDir string) {
 	var state create.State
 	state.Read()
 
-	privateKey, err := ioutil.ReadFile("_output/sa-signer")
+	privateKeyPath := filepath.Join(tokenDir, "sa-signer")
+	privateKey, err := ioutil.ReadFile(privateKeyPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -40,7 +42,7 @@ func New(config token.Config) {
 		log.Fatal(err)
 	}
 
-	tokenFile := "_output/token"
+	tokenFile := filepath.Join(tokenDir, "token")
 	f, err := os.Create(tokenFile)
 	if err != nil {
 		log.Fatal(err)

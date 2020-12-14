@@ -10,10 +10,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	outputDir = "_output"
-)
-
 var (
 	createConfig create.Config
 	createState  create.State
@@ -23,12 +19,12 @@ var createCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Creates STS infrastructure in AWS",
 	Run: func(cmd *cobra.Command, args []string) {
-		os.Mkdir(outputDir, 0700)
+		os.Mkdir(createConfig.TargetDir, 0700)
 
 		createState.InfraName = createConfig.InfraName
 		createState.Region = createConfig.Region
-		rsa.New(outputDir)
-		jwks.New(&createState, outputDir)
+		rsa.New(createConfig.TargetDir)
+		jwks.New(&createState, createConfig.TargetDir)
 		s3endpoint.New(createConfig, &createState)
 		createState.Write()
 	},
@@ -43,4 +39,6 @@ func init() {
 
 	createCmd.PersistentFlags().StringVar(&createConfig.Region, "region", "", "AWS region were the s3 OIDC endpoint will be created")
 	createCmd.MarkPersistentFlagRequired("region")
+
+	createCmd.PersistentFlags().StringVar(&createConfig.TargetDir, "dir", "_output", "Directory to read/write manifests into")
 }

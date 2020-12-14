@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"path/filepath"
 
 	awssdk "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -11,6 +12,8 @@ import (
 	"github.com/sjenning/sts-preflight/pkg/cmd/create"
 	"github.com/spf13/cobra"
 )
+
+var assumeDir string
 
 // assumeCmd represents the assume command
 var assumeCmd = &cobra.Command{
@@ -24,6 +27,7 @@ var assumeCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(assumeCmd)
 
+	rootCmd.PersistentFlags().StringVar(&assumeDir, "dir", "_output", "Directory containing generated token")
 	// assumeCmd.PersistentFlags().String("foo", "", "A help for foo")
 }
 
@@ -31,7 +35,8 @@ func execute() {
 	var state create.State
 	state.Read()
 
-	tokenBytes, err := ioutil.ReadFile("_output/token")
+	tokenFilePath := filepath.Join(assumeDir, "token")
+	tokenBytes, err := ioutil.ReadFile(tokenFilePath)
 	if err != nil {
 		log.Fatal(err)
 	}
