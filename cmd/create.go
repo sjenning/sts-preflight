@@ -10,6 +10,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	outputDir = "_output"
+)
+
 var (
 	createConfig create.Config
 	createState  create.State
@@ -19,12 +23,12 @@ var createCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Creates STS infrastructure in AWS",
 	Run: func(cmd *cobra.Command, args []string) {
-		os.Mkdir("_output", 0700)
+		os.Mkdir(outputDir, 0700)
 
 		createState.InfraName = createConfig.InfraName
 		createState.Region = createConfig.Region
-		rsa.New()
-		jwks.New(&createState)
+		rsa.New(outputDir)
+		jwks.New(&createState, outputDir)
 		s3endpoint.New(createConfig, &createState)
 		createState.Write()
 	},
