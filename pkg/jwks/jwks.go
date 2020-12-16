@@ -11,14 +11,19 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/sjenning/sts-preflight/pkg/cmd/create"
 	jose "gopkg.in/square/go-jose.v2"
 )
 
-func New(state *create.State) {
-	pubKeyFile := "_output/sa-signer.pub"
-	keysFile := "_output/keys.json"
+const (
+	keysJSONFile = "keys.json"
+)
+
+func New(state *create.State, targetDir string) {
+	pubKeyFile := filepath.Join(targetDir, "sa-signer.pub")
+	keysFile := filepath.Join(targetDir, keysJSONFile)
 
 	log.Print("Reading public key")
 	content, err := ioutil.ReadFile(pubKeyFile)
@@ -99,4 +104,43 @@ func keyIDFromPublicKey(publicKey interface{}) (string, error) {
 
 type KeyResponse struct {
 	Keys []jose.JSONWebKey `json:"keys"`
+}
+
+func MergeKeys(existingKeysFile, mergeWithKeysInTargetDir string) {
+	existingKeysData, err := ioutil.ReadFile(existingKeysFile)
+	if err != nil {
+		log.Fatalf("Failed to read in existing keys file: %s", err)
+	}
+
+	existingKeys := KeyResponse{}
+	if err := json.Unmarshal(existingKeysData, &existingKeys); err != nil {
+		log.Fatalf("Failed to unmarshal: %s", err)
+	}
+
+	mergeWithUpdatedKeysFile := filepath.Join(mergeWithKeysInTargetDir, keysJSONFile)
+
+	log.Printf("Merging previous keys.json into %s", mergeWithUpdatedKeysFile)
+
+	updateKeysData, err := ioutil.ReadFile(mergeWithUpdatedKeysFile)
+	if err != nil {
+		log.Fatalf("Failed to read in new keys file: %s", err)
+	}
+
+	updateKeys := KeyResponse{}
+	if err := json.Unmarshal(updateKeysData, &updateKeys); err != nil {
+		log.Fatalf("Failed to unmarshal: %s", err)
+	}
+
+	for _, key := range updateKeys.Keys {
+		existingKeys.Keys = append(existingKeys.Keys, key)
+	}
+
+	newKeysJSON, err := json.MarshalIndent(existingKeys, "", "    ")
+	if err != nil {
+		log.Fatalf("Failed to marshal keys JSON: %s", err)
+	}
+
+	if err := ioutil.WriteFile(mergeWithUpdatedKeysFile, newKeysJSON, 0644); err != nil {
+		log.Fatalf("Failed to save merged keys file: %s", err)
+	}
 }

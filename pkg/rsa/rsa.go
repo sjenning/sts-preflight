@@ -9,18 +9,25 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 
 	"golang.org/x/crypto/ssh"
 )
 
-func New() {
-	privateKeyFile := "_output/sa-signer"
-	publicKeyFile := "_output/sa-signer.pub"
+const (
+	privateKeyFile = "sa-signer"
+	publicKeyFile  = "sa-signer.pub"
+)
+
+func New(prefixDir string) {
+
+	privateKeyFilePath := filepath.Join(prefixDir, privateKeyFile)
+	publicKeyFilePath := filepath.Join(prefixDir, publicKeyFile)
 	bitSize := 4096
 
-	defer copyPrivateKeyForInstaller(privateKeyFile)
+	defer copyPrivateKeyForInstaller(privateKeyFilePath, prefixDir)
 
-	_, err := os.Stat(privateKeyFile)
+	_, err := os.Stat(privateKeyFilePath)
 	if err == nil {
 		log.Print("Using existing RSA keypair")
 		return
@@ -32,8 +39,8 @@ func New() {
 		log.Fatal(err.Error())
 	}
 
-	log.Print("Writing private key to ", privateKeyFile)
-	f, err := os.Create(privateKeyFile)
+	log.Print("Writing private key to ", privateKeyFilePath)
+	f, err := os.Create(privateKeyFilePath)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -48,8 +55,8 @@ func New() {
 		log.Fatal(err.Error())
 	}
 
-	log.Print("Writing public key to ", publicKeyFile)
-	f, err = os.Create(publicKeyFile)
+	log.Print("Writing public key to ", publicKeyFilePath)
+	f, err = os.Create(publicKeyFilePath)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -113,14 +120,16 @@ func writeKeyToFile(keyBytes []byte, saveFileTo string) error {
 	return nil
 }
 
-func copyPrivateKeyForInstaller(sourceFile string) {
-	privateKeyFileForInstaller := "_output/tls/bound-service-account-signing-key.key"
+func copyPrivateKeyForInstaller(sourceFile, prefixDir string) {
+	privateKeyForInstallerDir := "tls"
+	privateKeyForInstaller := filepath.Join(privateKeyForInstallerDir, "bound-service-account-signing-key.key")
+	privateKeyForInstallerPath := filepath.Join(prefixDir, privateKeyForInstaller)
 
-	tlsDir := "_output/tls"
-	if err := os.RemoveAll(tlsDir); err != nil {
+	tlsDirPath := filepath.Join(prefixDir, privateKeyForInstallerDir)
+	if err := os.RemoveAll(tlsDirPath); err != nil {
 		log.Fatalf("failed to remove tls installer directory: %s", err)
 	}
-	if err := os.MkdirAll(tlsDir, 0700); err != nil {
+	if err := os.MkdirAll(tlsDirPath, 0700); err != nil {
 		log.Fatalf("unable to create directories: %s", err)
 	}
 
@@ -131,7 +140,7 @@ func copyPrivateKeyForInstaller(sourceFile string) {
 	}
 	defer from.Close()
 
-	to, err := os.OpenFile(privateKeyFileForInstaller, os.O_RDWR|os.O_CREATE, 0600)
+	to, err := os.OpenFile(privateKeyForInstallerPath, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
 		log.Fatalf("failed to open/create target bound serviceaccount file: %s", err)
 	}

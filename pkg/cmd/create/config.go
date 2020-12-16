@@ -4,16 +4,18 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+	"path/filepath"
 )
 
 const (
-	stateFile = "_output/state.json"
+	stateFile = "state.json"
 )
 
 type Config struct {
 	InfraName               string
 	Region                  string
 	CredentialsRequestsFile string
+	TargetDir               string
 }
 
 type State struct {
@@ -21,6 +23,7 @@ type State struct {
 	Region    string `json:"region"`
 	Kid       string `json:"kid"`
 	RoleARN   string `json:"roleARN"`
+	TargetDir string `json:"targetDir"`
 }
 
 func (s *State) Write() {
@@ -28,14 +31,17 @@ func (s *State) Write() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = ioutil.WriteFile(stateFile, jsonBytes, 0600)
+
+	stateFilePath := filepath.Join(s.TargetDir, stateFile)
+	err = ioutil.WriteFile(stateFilePath, jsonBytes, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
 func (s *State) Read() {
-	jsonBytes, err := ioutil.ReadFile(stateFile)
+	stateFilePath := filepath.Join(s.TargetDir, stateFile)
+	jsonBytes, err := ioutil.ReadFile(stateFilePath)
 	if err != nil {
 		log.Fatal(err)
 	}
